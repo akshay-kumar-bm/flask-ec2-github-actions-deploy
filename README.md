@@ -1,105 +1,49 @@
-# Flask EC2 GitHub Actions Deploy 🚀
+# Flask EC2 GitHub Actions Deploy
 
-A simple and stylish Flask web application deployed to an AWS EC2 instance using a fully automated GitHub Actions CI/CD pipeline.
+A minimal Flask dashboard page that is automatically deployed to an AWS EC2 instance by a GitHub Actions CI/CD workflow on every push to `main`.
 
-## 📁 Project Structure
+## What it does
+`app.py` serves a single route (`/`) that renders `templates/index.html` with the server hostname and current time. The real point of the repo is the pipeline in `.github/workflows/deploy.yml`, which copies the code to EC2 over SCP and restarts the app via SSH.
 
-```
-.
-├── .github/
-│   └── workflows/
-│       └── deploy.yml        # GitHub Actions deployment workflow
-├── templates/
-│   └── index.html            # Bootstrap-styled dashboard HTML
-├── app.py                    # Flask application
-├── requirements.txt          # Python dependencies
+## Key features
+- Push-to-deploy: workflow triggers on pushes to `main`.
+- `appleboy/scp-action` copies the repo to the EC2 host (cleaning the target directory first, `rm: true`).
+- `appleboy/ssh-action` installs `requirements.txt` and restarts a `flaskapp` systemd service.
+- Credentials are kept in GitHub Secrets, not in the repo.
 
-```
+## Tech stack
+Python, Flask, Gunicorn (listed in requirements), Bootstrap-styled HTML template, GitHub Actions, AWS EC2 + systemd.
 
-## 🖥️ Live Dashboard
-
-The landing page displays a dashboard showing:
-
-- Deployment status
-- EC2 instance metadata
-- CI/CD architecture
-- Deployment history
-
-Styled with Bootstrap 5 and AWS-inspired colors.
-
-## 🚀 Deployment Pipeline
-
-Automated deployment using GitHub Actions:
-
-- Push to `main` triggers deployment
-- Code is securely copied to EC2
-- EC2 installs dependencies and restarts the Flask app using `systemctl`
-
-### Workflow: `.github/workflows/deploy.yml`
-
-- Uses `appleboy/scp-action` to copy files
-- Uses `appleboy/ssh-action` to restart the app
-- Secrets like `EC2_HOST`, `EC2_SSH_KEY` are configured in the GitHub repo
-
-## 🛠️ Setup Instructions
-
-### Prerequisites
-
-- AWS EC2 instance (Ubuntu recommended)
-- SSH key access
-- Python 3.8+
-- GitHub repo with secrets set:
-  - `EC2_HOST`
-  - `EC2_USER`
-  - `EC2_SSH_KEY` (private SSH key as a secret)
-
-### 1. Clone the Repo
-
-```bash
-git clone https://github.com/your-username/flask-ec2-github-actions-deploy.git
-cd flask-ec2-github-actions-deploy
+## Flow
+```mermaid
+flowchart LR
+  A[git push to main] --> B[GitHub Actions]
+  B -->|scp-action| C[EC2: project folder]
+  B -->|ssh-action| D[pip install + systemctl restart flaskapp]
 ```
 
-### 2. Run Locally (for testing)
+## Project structure
+```
+.github/workflows/deploy.yml   # CI/CD workflow
+templates/index.html           # dashboard template
+app.py                         # Flask app (host 0.0.0.0, port 5000)
+requirements.txt               # flask, gunicorn
+```
 
+## Setup
+1. Prepare an Ubuntu EC2 instance with Python 3 and a systemd unit named `flaskapp` that runs the app (the unit file is not in this repo).
+2. In the GitHub repo add secrets: `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`.
+3. Edit `deploy.yml`: the target path and `cd` still use the placeholder `your-repo-name`; replace it with your real directory.
+4. Push to `main`.
+
+Local run:
 ```bash
 pip install -r requirements.txt
-python app.py
+python app.py   # http://localhost:5000
 ```
 
-Visit: `http://localhost:5000`
-
-### 3. Deploy via GitHub Actions
-
-* Push your code to the `main` branch.
-* GitHub Actions will automatically deploy it to the configured EC2 instance.
-
-## 🔒 GitHub Secrets (required)
-
-| Secret Name   | Description                        |
-| ------------- | ---------------------------------- |
-| `EC2_HOST`    | Public IP/DNS of your EC2 instance |
-| `EC2_USER`    | EC2 username (e.g., ubuntu)        |
-| `EC2_SSH_KEY` | Private SSH key for EC2 access     |
-
-## 🧪 Tech Stack
-
-* **Flask** - Python Web Framework
-* **Gunicorn** - WSGI Server
-* **GitHub Actions** - CI/CD
-* **AWS EC2** - Deployment Target
-* **Bootstrap 5** - Frontend Styling
-
-## 👨‍💻 Author
-
-**Akshay**
-*This project demonstrates automated infrastructure deployment with simplicity and elegance.*
----
-##  Screenshort
-![image](https://github.com/user-attachments/assets/d28ec224-0673-4565-bc0f-acfbbdbf2c01)
-
----
-
-## 📄 License
-
-MIT License. See `LICENSE` file for more info.
+## Limitations / future work
+- Workflow still contains the `your-repo-name` placeholder.
+- No tests, no systemd unit file or provisioning script included.
+- Uses `pip3 install --break-system-packages` rather than a virtualenv.
+- README references a LICENSE file that is not in the repo.
